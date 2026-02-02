@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Tolerance Calculator</title>
+<style>
+body { font-family: Arial; background: #f4f4f4; margin: 50px; }
+.card { background: #fff; padding: 20px; border-radius: 10px; max-width: 600px; margin: auto; box-shadow: 0 2px 5px rgba(0,0,0,0.2);}
+h2 { text-align: center; }
+label { display: block; margin-top: 10px; }
+input, button { width: 100%; padding: 8px; margin-top: 5px; border-radius: 5px; border: 1px solid #ccc; }
+button { background: #007bff; color: #fff; border: none; cursor: pointer; }
+button:hover { background: #0056b3; }
+.result { margin-top: 20px; background: #e9f7ef; padding: 10px; border-radius: 5px; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h2>Tolerance Calculator (Ag, Ad, Dg, Dd)</h2>
+
+  <label>Enter dimension with tolerance (e.g., 50H7, 6h6):</label>
+  <input type="text" id="inputDim" value="50H7">
+
+  <button onclick="calculate()">Calculate</button>
+
+  <div class="result" id="result"></div>
+</div>
+
+<script>
+// Jednostavna tablica IT vrijednosti (µm) po klasama za demo
+const ITTable = {
+  5: 5,
+  6: 10,
+  7: 25,
+  8: 50,
+  9: 80,
+  10: 120
+};
+
+// Devijacije za rupe/osovine po oznakama (po JUS/ISO principu, aproks.)
+const deviationTable = {
+  H: { type: "hole", es: 0, ei: null }, // ei = -T
+  h: { type: "shaft", es: null, ei: 0 }, // es = T
+  g: { type: "shaft", es: null, ei: 0 },
+  f: { type: "shaft", es: null, ei: 0 },
+  G: { type: "hole", es: 0, ei: null },
+  F: { type: "hole", es: 0, ei: null }
+};
+
+function calculate() {
+  const input = document.getElementById("inputDim").value.trim();
+  const match = input.match(/^(\d+\.?\d*)([a-zA-Z]+)(\d+)$/);
+  if (!match) {
+    document.getElementById("result").innerHTML = "❌ Invalid format. Example: 50H7";
+    return;
+  }
+
+  const nominal = parseFloat(match[1]);
+  const letter = match[2];
+  const ITclass = parseInt(match[3]);
+
+  // Korak 1: Tolerancija T
+  const T = ITTable[ITclass] || 25; // default ako nije u tablici
+  let resultText = `Nominal dimension: ${nominal} mm\n`;
+  resultText += `Tolerance class: ${letter}${ITclass}\n`;
+  resultText += `Step 1: Find Tolerancija (T) from table: T = ${T} µm\n\n`;
+
+  // Korak 2: početna devijacija
+  const dev = deviationTable[letter];
+  let Ag, Ad;
+
+  if (!dev) {
+    document.getElementById("result").innerHTML = "❌ Unknown tolerance letter.";
+    return;
+  }
+
+  if (dev.type === "shaft") {
+    // Ako je osovina, Ad = 0 (početna), Ag = Ad + T
+    Ad = 0;
+    Ag = Ad + T;
+    resultText += `Step 2: Osovina devijacije:\nAd = ${Ad} µm\nAg = Ad + T = ${Ag} µm\n\n`;
+  } else {
+    // Ako je rupa, Ag = 0 (početna), Ad = Ag - T
+    Ag = 0;
+    Ad = Ag - T;
+    resultText += `Step 2: Rupa devijacije:\nAg = ${Ag} µm\nAd = Ag - T = ${Ad} µm\n\n`;
+  }
+
+  // Korak 3: Računanje Dg, Dd
+  const Dg = Ag + nominal*1000; // pretvaramo nominalu u µm
+  const Dd = Ad + nominal*1000;
+  resultText += `Step 3: Calculate Dg, Dd:\nDg = Ag + nominal = ${Dg} µm\nDd = Ad + nominal = ${Dd} µm\n\n`;
+
+  // Pretvorimo u mm
+  resultText += `Final results (in mm):\n`;
+  resultText += `Ag = ${(Ag/1000).toFixed(3)} mm\n`;
+  resultText += `Ad = ${(Ad/1000).toFixed(3)} mm\n`;
+  resultText += `Dg = ${(Dg/1000).toFixed(3)} mm\n`;
+  resultText += `Dd = ${(Dd/1000).toFixed(3)} mm\n`;
+
+  document.getElementById("result").innerText = resultText;
+}
+</script>
+
+</body>
+</html>
